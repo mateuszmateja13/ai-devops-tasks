@@ -1,0 +1,101 @@
+# =========================================================
+# Node.js
+# =========================================================
+
+# Zależności instalowane przez npm / yarn / pnpm
+node_modules/
+jspm_packages/
+
+# Katalogi i pliki generowane podczas budowania
+dist/
+build/
+out/
+.next/
+.nuxt/
+*.tsbuildinfo
+
+# Cache narzędzi
+.npm/
+.yarn/cache/
+.yarn/install-state.gz
+.pnpm-store/
+.eslintcache
+.cache/
+.parcel-cache/
+
+# Raporty testów i pokrycia kodu
+coverage/
+.nyc_output/
+junit.xml
+
+# Logi
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================================================
+# Zmienne środowiskowe i sekrety
+# =========================================================
+
+# Pliki .env zawierają hasła, connection stringi do MongoDB i klucze API
+.env
+.env.*
+# Szablon bez sekretów powinien trafić do repozytorium
+!.env.example
+
+# Klucze i certyfikaty
+*.pem
+*.key
+*.crt
+
+# =========================================================
+# Docker
+# =========================================================
+
+# Lokalne nadpisania konfiguracji Compose (ustawienia konkretnego dewelopera)
+docker-compose.override.yml
+compose.override.yml
+
+# Katalogi montowane jako wolumeny (bind mounts) z danymi kontenerów
+docker-data/
+.docker/
+
+# =========================================================
+# MongoDB (lokalna baza danych)
+# =========================================================
+
+# Pliki danych bazy, gdy katalog /data/db jest zamontowany lokalnie
+data/
+mongo-data/
+mongodb-data/
+db-data/
+
+# Kopie zapasowe tworzone przez mongodump i eksporty
+dump/
+backup/
+*.bson
+*.archive
+*.gz
+
+# Logi serwera mongod
+mongod.log
+mongo*.log
+
+# =========================================================
+# System operacyjny i edytory
+# =========================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
