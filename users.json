@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Jan Kowalski",
+      "email": "jan@example.com",
+      "roles": ["admin", "user"]
+    },
+    {
+      "id": 2,
+      "name": "Anna Nowak",
+      "email": "anna@example.com",
+      "roles": ["user"]
+    }
+  ]
+}

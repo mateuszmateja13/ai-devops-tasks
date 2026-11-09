@@ -1,0 +1,3 @@
+id,name,email,roles
+1,Jan Kowalski,jan@example.com,admin;user
+2,Anna Nowak,anna@example.com,user
