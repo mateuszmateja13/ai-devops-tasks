@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME     = 'docker.io/mojafirma/myapp'   // rejestr + konto + nazwa obrazu
+        REGISTRY_CREDS = 'docker-registry-creds'       // ID poświadczeń w Jenkinsie
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'npm ci'                             // dokładnie wersje z package-lock.json
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'                           // bramka jakości przed buildem
+            }
+        }
+
+        stage('Build') {
+            steps {                                     // poprawione: było "stesp"
+                sh 'npm run build'                      // poprawione: było "npm build"
+            }
+        }
+
+        stage('Build Docker image') {
+            steps {
+                script {
+                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()}"
+                }
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ."
+            }
+        }
+
+        stage('Push Docker image') {
+            when {
+                branch 'main'                           // warunek na początku etapu; main zamiast master
+            }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: env.REGISTRY_CREDS,
+                    usernameVariable: 'REGISTRY_USER',
+                    passwordVariable: 'REGISTRY_PASS'
+                )]) {
+                    sh '''
+                        echo "$REGISTRY_PASS" | docker login docker.io -u "$REGISTRY_USER" --password-stdin
+                        docker push "$IMAGE_NAME:$IMAGE_TAG"
+                        docker push "$IMAGE_NAME:latest"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                docker logout docker.io || true
+                docker rmi "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest" 2>/dev/null || true
+            '''
+        }
+    }
+}

@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            stesp {
+                sh 'npm install'
+                sh 'npm build'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'docker build -t myapp .'
+                sh 'docker push myapp:latest'
+            }
+            when {
+                branch 'master'
+            }
+        }
+    }
+}
