@@ -1,0 +1,211 @@
+# =====================================================================
+# Jenkins Configuration as Code (JCasC)
+# Wymaga wtyczki "configuration-as-code". Plik wskazuje zmienna
+# CASC_JENKINS_CONFIG, np. CASC_JENKINS_CONFIG=/var/jenkins_home/casc/jenkins-casc.yaml
+# Sekrety (${...}) są pobierane ze zmiennych środowiskowych lub plików sekretów.
+#
+# --- Podstawowe wtyczki ----------------------------------------------
+# JCasC konfiguruje wtyczki, ale ich nie instaluje. Instalacja odbywa się
+# przy budowaniu obrazu poleceniem:
+#   jenkins-plugin-cli --plugins <lista poniżej>
+# lub z pliku plugins.txt (jedna wtyczka na linię):
+#
+#   configuration-as-code   – ten plik
+#   workflow-aggregator     – Pipeline
+#   job-dsl                 – definicje zadań w sekcji "jobs"
+#   git                     – integracja z Git
+#   github                  – webhooki i integracja z GitHub
+#   credentials-binding     – withCredentials w pipeline'ach
+#   nodejs                  – narzędzie Node.js
+#   docker-workflow         – Docker w pipeline'ach i narzędzie docker
+#   pipeline-maven          – integracja z Maven
+#   timestamper             – znaczniki czasu w logach
+#   ws-cleanup              – czyszczenie workspace (cleanWs)
+#   build-timeout           – limity czasu buildów
+#   matrix-auth             – szczegółowe uprawnienia (rozszerzenie autoryzacji)
+# =====================================================================
+
+jenkins:
+  systemMessage: "Jenkins skonfigurowany przez JCasC – zmiany wprowadzaj w repozytorium, nie w UI"
+
+  # --- Podstawowe ustawienia ---------------------------------------
+  # Liczba wykonawców na kontrolerze. W produkcji zalecane 0 –
+  # buildy powinny działać na agentach, nie na kontrolerze.
+  numExecutors: 2
+  mode: EXCLUSIVE                 # kontroler uruchamia tylko zadania jawnie do niego przypisane
+  labelString: "built-in"
+
+  quietPeriod: 5                  # sekundy oczekiwania po zmianie w SCM przed startem buildu
+  scmCheckoutRetryCount: 2        # ponowienia checkoutu przy chwilowym błędzie sieci
+
+  # --- Bezpieczeństwo ----------------------------------------------
+  securityRealm:
+    local:
+      allowsSignup: false         # brak samodzielnej rejestracji kont
+      users:
+        - id: "admin"
+          name: "Administrator"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false   # bez logowania nic nie widać
+
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: true   # ochrona CSRF, działa także za reverse proxy
+
+  remotingSecurity:
+    enabled: true                 # agent nie może wykonywać dowolnych poleceń na kontrolerze
+
+  disableRememberMe: false
+  markupFormatter: plainText      # opisy zadań jako zwykły tekst – ochrona przed XSS
+
+  # --- Zmienne globalne dostępne we wszystkich buildach -----------
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "DOCKER_REGISTRY"
+            value: "docker.io"
+          - key: "TZ"
+            value: "Europe/Warsaw"
+
+# --- Globalny katalog narzędzi -------------------------------------
+tool:
+  jdk:
+    installations:
+      - name: "jdk-17"
+        home: "/opt/java/openjdk"      # JDK dostępny w oficjalnym obrazie jenkins/jenkins
+
+  maven:
+    installations:
+      - name: "maven-3.9"
+        properties:
+          - installSource:
+              installers:
+                - maven:
+                    id: "3.9.9"        # pobierany automatycznie przy pierwszym użyciu
+
+  nodejs:
+    installations:
+      - name: "node-20"
+        properties:
+          - installSource:
+              installers:
+                - nodeJSInstaller:
+                    id: "20.18.0"
+                    npmPackagesRefreshHours: 72
+
+  dockerTool:
+    installations:
+      - name: "docker"
+        properties:
+          - installSource:
+              installers:
+                - fromDocker:
+                    version: "27.3.1"   # sam klient CLI – demon Docker musi działać na agencie
+
+  git:
+    installations:
+      - name: "Default"
+        home: "git"
+
+# --- Poświadczenia ---------------------------------------------------
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "docker-registry-creds"
+              description: "Rejestr Docker – token dostępu"
+              username: "${DOCKER_REGISTRY_USER}"
+              password: "${DOCKER_REGISTRY_TOKEN}"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-creds"
+              description: "GitHub – Personal Access Token"
+              username: "${GITHUB_USER}"
+              password: "${GITHUB_TOKEN}"
+
+# --- Ustawienia wtyczek i lokalizacja ------------------------------
+unclassified:
+  location:
+    url: "https://jenkins.example.com/"
+    adminAddress: "jenkins@example.com"
+
+  buildDiscarders:
+    configuredBuildDiscarders:
+      - "jobBuildDiscarder"
+      - simpleBuildDiscarder:
+          discarder:
+            logRotator:
+              numToKeepStr: "20"      # domyślnie przechowuj 20 ostatnich buildów
+              daysToKeepStr: "30"
+
+  timestamper:
+    allPipelines: true              # znaczniki czasu w logach wszystkich pipeline'ów
+
+# --- Przykładowe zadania (wtyczka job-dsl) -------------------------
+jobs:
+  # Pipeline pobierający Jenkinsfile z repozytorium
+  - script: |
+      pipelineJob('simple-task-api') {
+        description('Pipeline CI/CD dla Simple Task API – Jenkinsfile z repozytorium')
+        logRotator {
+          numToKeep(20)
+        }
+        properties {
+          disableConcurrentBuilds()
+        }
+        triggers {
+          scm('H/5 * * * *')
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/mojafirma/simple-task-api.git')
+                  credentials('github-creds')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+
+  # Pipeline z kodem zdefiniowanym bezpośrednio w konfiguracji
+  - script: |
+      pipelineJob('hello-pipeline') {
+        description('Przykładowy pipeline z kodem inline – test narzędzi')
+        definition {
+          cps {
+            sandbox(true)
+            script('''
+              pipeline {
+                agent any
+                tools {
+                  nodejs 'node-20'
+                  maven 'maven-3.9'
+                }
+                options {
+                  timeout(time: 10, unit: 'MINUTES')
+                }
+                stages {
+                  stage('Wersje narzędzi') {
+                    steps {
+                      sh 'node --version'
+                      sh 'npm --version'
+                      sh 'mvn --version'
+                    }
+                  }
+                }
+              }
+            '''.stripIndent())
+          }
+        }
+      }
