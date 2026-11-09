@@ -1,6 +1,6 @@
 # Zadanie 7: skrypt bash – kontrola usługi Docker
 
-Model poproszono o prosty skrypt bash, który sprawdza stan usługi Docker i w razie potrzeby próbuje ją uruchomić. Gotowy skrypt zapisano w repozytorium jako [`scripts/check-docker.sh`](scripts/check-docker.sh).
+Model poproszono o prosty skrypt bash, który sprawdza stan usługi Docker i w razie potrzeby próbuje ją uruchomić. Gotowy skrypt zapisano w repozytorium jako [`check_docker.sh`](check_docker.sh).
 
 ## Prompt
 
@@ -13,7 +13,7 @@ Napisz prosty skrypt bash, który sprawdza, czy usługa Docker działa, a jeśli
 ```bash
 #!/usr/bin/env bash
 # Sprawdza, czy usługa Docker działa, a jeśli nie - próbuje ją uruchomić.
-# Użycie: ./check-docker.sh
+# Użycie: ./check_docker.sh
 
 set -u
 
@@ -73,8 +73,8 @@ exit 1
 ## Uruchomienie
 
 ```bash
-chmod +x scripts/check-docker.sh
-./scripts/check-docker.sh
+chmod +x check_docker.sh
+./check_docker.sh
 ```
 
 ## Opis

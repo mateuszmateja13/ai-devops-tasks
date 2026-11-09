@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sprawdza, czy usługa Docker działa, a jeśli nie - próbuje ją uruchomić.
-# Użycie: ./check-docker.sh
+# Użycie: ./check_docker.sh
 
 set -u
 
